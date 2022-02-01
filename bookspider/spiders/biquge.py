@@ -8,7 +8,7 @@ domain = "https://www.xbiquge.la"
 class BiqugeSpider(scrapy.Spider):
     name = 'biquge'
     # allowed_domains = ['xxx.com']
-    start_urls = ['http://www.xbiquge.la']
+    start_urls = ['https://www.xbiquge.la/14/14718/']
 
     def parse(self, response, **kwargs):
         topics = response.xpath("//div[@class='nav']/ul/li/a")  # 爬取每个a标签
@@ -33,11 +33,20 @@ class BiqugeSpider(scrapy.Spider):
         topic_name = response.xpath("//div[@class='con_top']/a/text()")[1].extract()
         cover_url = response.xpath("//div[@id='fmimg']/img/@src").extract()[0]
         book_name = response.xpath("//div[@id='info']/h1/text()").extract()[0]
-        author = response.xpath("//div[@id='info']/p[1]/text()").extract()[0].split("：")[1]
-        last_update_time = response.xpath("//div[@id='info']/p[3]/text()").extract()[0][5:]
+        authors = response.xpath("//div[@id='info']/p[1]/text()").extract()[0].split("：")[1]
+        author = "佚名"
+        if authors:
+            author = authors
+        last_update_times = response.xpath("//div[@id='info']/p[3]/text()").extract()[0]
+        last_update_time = ""
+        if len(last_update_times) > 5:
+            last_update_time = last_update_times[5:]
         last_update_chapter = response.xpath("//div[@id='info']/p[4]/a/text()").extract()[0]
-        intro = response.xpath("//div[@id='intro']/p[2]/text()").extract()[0]
-        intro = self.handleIntro(intro)
+        intros = response.xpath("//div[@id='intro']/p[2]/text()")
+        intro = "暂无简介"
+        if len(intros):
+            intro = intros.extract()[0]
+            intro = self.handleIntro(intro)
 
         item = BookItem()
         item['novel_name'] = book_name
@@ -81,6 +90,10 @@ class BiqugeSpider(scrapy.Spider):
         yield item
 
     def handleIntro(self, intro):
+        intro = intro.replace("\u3000", '') # 去掉三种空格
+        intro = intro.replace("\u00A0", '')
+        intro = intro.replace("\u0020", '')
+        intro = intro.replace("javascript:share({content:'", '')
         intro = intro.replace(' ', '')
         intro = intro.replace('\r', '')
         intro = intro.replace('\n', '')
@@ -88,6 +101,10 @@ class BiqugeSpider(scrapy.Spider):
 
     def handleContent(self, content):
         content = content.replace('\xa0', '')  # 去空格(\xa0)
+        content = content.replace("\u3000", '')  # 去掉三种空格
+        content = content.replace("\u00A0", '')
+        content = content.replace("\u0020", '')
+        content = content.replace("?", '')      # 去英文?符
         content = content.replace("\r", '')    # 去掉转义符\r
         content = content.replace("\"", "")
         content = content.replace(" ", '')  # 去空格
