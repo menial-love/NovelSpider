@@ -17,7 +17,8 @@ class biqugeSpiderPipeline:
                                        user='root',
                                        password='159753',
                                        db='web_novel',
-                                       port=3306)
+                                       port=3306,
+                                       charset="utf8mb4")
         self.cursor = self.connect.cursor()
 
     def process_item(self,item,spider):
@@ -38,19 +39,20 @@ class biqugeSpiderPipeline:
             format = '%Y-%m-%d %H:%M:%S'
             last_update = datetime.datetime.strptime(last_update, format)  # <class 'datetime.datetime'>
             last_update = last_update.strftime(format)   #datetime对象转化为字符串
-            sql1 = """INSERT INTO book(title,cover,author,last_update,last_chapter,intro,
+            sql1 = """INSERT INTO book(novel_name,cover,author,last_update,last_chapter,intro,
                     topic) VALUES("%s","%s","%s","%s","%s","%s","%s")""" \
                    % (novel_name,novel_cover,novel_author,last_update,last_chapter,intro,topic)
             self.cursor.execute(sql1)
             self.connect.commit()
 
         elif type(item) == ChapterItem:
-            book_title = item["book_title"]
+            novel_id = item["novel_id"]
             chapter_title = item["chapter_title"]
             content = item["content"]
             chapter_num = item["chapter_num"]
-            sql = """INSERT INTO chapter(book_title,chapter_title,content,chapter_num)
-            VALUES("%s","%s","%s","%s")""" %(book_title,chapter_title,content,chapter_num)
+            sql = """INSERT INTO chapter(novel_id,chapter_title,content,chapter_num)
+            VALUES("%s","%s","%s","%s")""" %(novel_id,chapter_title,content,chapter_num)
+            self.connect.ping(reconnect=True)
             self.cursor.execute(sql)
             self.connect.commit()
         return item

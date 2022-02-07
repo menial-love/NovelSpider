@@ -15,7 +15,7 @@ class BookItem(scrapy.Item):
     topic = scrapy.Field()  # 对应book表的topic
 
 class ChapterItem(scrapy.Item):
-    book_title = scrapy.Field()
+    novel_id = scrapy.Field()
     chapter_title = scrapy.Field()   # 对应chapter表的chapter_title
     content = scrapy.Field()        # 对应chapter表的content，章节内容
     chapter_num = scrapy.Field()    # 章节号

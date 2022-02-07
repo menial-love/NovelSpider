@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+import pymysql
 import scrapy
 from bookspider.items import BookItem,ChapterItem,ModuleItem
 
@@ -8,7 +8,7 @@ domain = "https://www.xbiquge.la"
 class BiqugeSpider(scrapy.Spider):
     name = 'biquge'
     # allowed_domains = ['xxx.com']
-    start_urls = ['https://www.xbiquge.la/14/14718/']
+    start_urls = ['https://www.xbiquge.la']
 
     def parse(self, response, **kwargs):
         topics = response.xpath("//div[@class='nav']/ul/li/a")  # 爬取每个a标签
@@ -58,6 +58,22 @@ class BiqugeSpider(scrapy.Spider):
         item['topic'] = topic_name
         yield item
 
+        connect = pymysql.connect(host='localhost',
+                                  user='root',
+                                  password='159753',
+                                  db='web_novel',
+                                  port=3306,
+                                  charset="utf8mb4"
+                                  )
+        cursor = connect.cursor()
+        sql = """SELECT novel_id FROM book WHERE novel_name = "%s" AND author = "%s" """ %(book_name, author)
+        cursor.execute(sql)
+        connect.commit()
+        novel_ids = cursor.fetchall()
+        novel_id = novel_ids[0][0]
+        cursor.close()
+        connect.close()
+
         chapters = response.xpath("//div[@id='list']/dl/dd/a")
         number = 0
         for chapter in chapters:
@@ -65,12 +81,12 @@ class BiqugeSpider(scrapy.Spider):
             chapter_name = chapter.xpath("./text()").extract()[0]
             number += 1
             chapter_url = domain + chapter_url
-            yield scrapy.Request(chapter_url, meta={"book_name": book_name,
-                                                    "chapter_name": chapter_name,
-                                                    "chapter_num": number}, callback=self.getContent)
+            yield scrapy.Request(chapter_url, meta={"chapter_name": chapter_name,
+                                                    "chapter_num": number,
+                                                    "novel_id": novel_id}, callback=self.getContent)
 
     def getContent(self, response):
-        book_name = response.meta["book_name"]
+        novel_id = response.meta["novel_id"]
         chapter_name = response.meta["chapter_name"]
         chapter_num = response.meta["chapter_num"]
         contents = response.xpath("//div[@id='content']/text()").extract()
@@ -83,7 +99,7 @@ class BiqugeSpider(scrapy.Spider):
         content = content.strip()    # 去文本末尾换行符
 
         item = ChapterItem()
-        item["book_title"] = book_name
+        item["novel_id"] = novel_id
         item["chapter_title"] = chapter_name
         item["chapter_num"] = chapter_num
         item["content"] = content
